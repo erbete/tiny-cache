@@ -91,7 +91,6 @@ func TestContains(t *testing.T) {
 	}
 }
 
-// TODO
 func TestSweeper(t *testing.T) {
 	cache, _ := NewCache(5, "100ms")
 	const tKey1 = "test-key-1"
