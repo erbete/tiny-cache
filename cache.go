@@ -160,6 +160,8 @@ func (c cache) Keys() []string {
 // sweep deletes any expired payload found inside a shard
 func (s *shard) sweep() {
 	ticker := time.NewTicker(s.sweepInterval)
+	defer ticker.Stop()
+
 	for range ticker.C {
 		s.Lock()
 		for key, payload := range s.items {
