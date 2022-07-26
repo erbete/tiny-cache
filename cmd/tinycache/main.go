@@ -1,7 +1,6 @@
 package main
 
 import (
-	"fmt"
 	"log"
 	"tinycache"
 )
@@ -12,5 +11,5 @@ func main() {
 		log.Fatalln(err)
 	}
 
-	fmt.Println(cache)
+	_ = cache
 }

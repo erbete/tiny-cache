@@ -12,14 +12,22 @@ const (
 )
 
 func TestNewCache(t *testing.T) {
-	_, err := NewCache(5, "10m")
-	if err != nil {
-		t.Error("initializing cache failed", err)
+	var tShardCount uint16 = 5
+	tDuration, _ := time.ParseDuration("10m")
+
+	cache := NewCache(5, "10m")
+
+	if cache.shardCount != tShardCount {
+		t.Errorf("excpected shard count to equal %d got %d", tShardCount, cache.shardCount)
+	}
+
+	if cache.sweepInterval != tDuration {
+		t.Errorf("excpected sweep interval equal %d got %d", tDuration, cache.sweepInterval)
 	}
 }
 
 func TestAdd(t *testing.T) {
-	cache, _ := NewCache(2, "200ms")
+	cache := NewCache(2, "200ms")
 
 	defer func() {
 		if r := recover(); r != nil {
@@ -30,7 +38,7 @@ func TestAdd(t *testing.T) {
 }
 
 func TestGet(t *testing.T) {
-	cache, _ := NewCache(2, "200ms")
+	cache := NewCache(2, "200ms")
 	cache.Add(tKey, tData, "100ms")
 
 	data, err := cache.Get(tKey)
@@ -55,7 +63,7 @@ func TestGet(t *testing.T) {
 }
 
 func TestDelete(t *testing.T) {
-	cache, _ := NewCache(2, "200ms")
+	cache := NewCache(2, "200ms")
 
 	cache.Add(tKey, tData, "100ms")
 	cache.Delete(tKey)
@@ -74,7 +82,7 @@ func TestDelete(t *testing.T) {
 }
 
 func TestContains(t *testing.T) {
-	cache, _ := NewCache(2, "200ms")
+	cache := NewCache(2, "200ms")
 	cache.Add(tKey, tData, "100ms")
 	if !cache.Contains(tKey) {
 		t.Error("expected data not found")
@@ -92,7 +100,7 @@ func TestContains(t *testing.T) {
 }
 
 func TestSweeper(t *testing.T) {
-	cache, _ := NewCache(5, "100ms")
+	cache := NewCache(5, "100ms")
 	const tKey1 = "test-key-1"
 	const tKey2 = "test-key-2"
 	const tKey3 = "dont-delete-me-plz"
@@ -106,7 +114,7 @@ func TestSweeper(t *testing.T) {
 
 	time.Sleep(400 * time.Millisecond)
 	foundtKey3 := false
-	for _, shard := range cache {
+	for _, shard := range cache.shards {
 		shard.RLock()
 		if _, ok := shard.items[tKey1]; ok {
 			t.Errorf("sweeper did not remove expired payload with key \"%s\"", tKey1)
@@ -128,7 +136,7 @@ func TestSweeper(t *testing.T) {
 }
 
 func TestFlush(t *testing.T) {
-	cache, _ := NewCache(5, "10m")
+	cache := NewCache(5, "10m")
 
 	cache.Add("test-key-1", "some data", "5m")
 	cache.Add("test-key-2", "some data", "5m")
@@ -138,7 +146,7 @@ func TestFlush(t *testing.T) {
 
 	cache.Flush()
 
-	for _, shard := range cache {
+	for _, shard := range cache.shards {
 		if len(shard.items) > 0 {
 			t.Error("flush did not remove data from the cache")
 		}
@@ -146,7 +154,7 @@ func TestFlush(t *testing.T) {
 }
 
 func TestKeys(t *testing.T) {
-	cache, _ := NewCache(5, "50ms")
+	cache := NewCache(5, "50ms")
 
 	const (
 		tKey1 = "test-key-1"
@@ -178,7 +186,7 @@ func TestKeys(t *testing.T) {
 }
 
 func BenchmarkTestGet(b *testing.B) {
-	cache, _ := NewCache(10, "5m")
+	cache := NewCache(10, "5m")
 	const tData = "test data"
 
 	for i := 0; i < b.N; i++ {
@@ -192,7 +200,7 @@ func BenchmarkTestGet(b *testing.B) {
 }
 
 func BenchmarkTestAdd(b *testing.B) {
-	cache, _ := NewCache(10, "5m")
+	cache := NewCache(10, "5m")
 	const tData = "test data"
 	b.ResetTimer()
 

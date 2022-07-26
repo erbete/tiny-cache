@@ -1,54 +1,58 @@
 package tinycache
 
 import (
-	"crypto/sha1"
 	"sync"
 	"time"
+
+	"github.com/sigurn/crc16"
 )
 
-type (
-	shard struct {
-		sync.RWMutex
-		items         map[string]*payload
-		sweepInterval time.Duration
-	}
+type payload struct {
+	data    string
+	expires int64
+}
 
-	payload struct {
-		data    string
-		expires int
-	}
+type shard struct {
+	sync.RWMutex
+	items map[string]*payload
+}
 
-	cache []*shard
-)
+type cache struct {
+	shards        []*shard
+	shardCount    uint16
+	sweepInterval time.Duration
+}
 
-func NewCache(shardSize int, sweepInterval string) (cache, error) {
+func NewCache(shardCount uint16, sweepInterval string) cache {
 	interval, err := time.ParseDuration(sweepInterval)
 	if err != nil {
-		return nil, err
+		panic(err)
 	}
 
-	cache := make([]*shard, shardSize)
-	for i := 0; i < shardSize; i++ {
+	shards := make([]*shard, shardCount)
+	for i := 0; uint16(i) < shardCount; i++ {
 		shard := &shard{
-			RWMutex:       sync.RWMutex{},
-			items:         make(map[string]*payload),
-			sweepInterval: interval,
+			RWMutex: sync.RWMutex{},
+			items:   make(map[string]*payload),
 		}
 
-		cache[i] = shard
-		go shard.sweep()
+		shards[i] = shard
+		go shard.sweep(interval)
 	}
 
-	return cache, nil
+	return cache{
+		shards:        shards,
+		shardCount:    shardCount,
+		sweepInterval: interval,
+	}
 }
 
 func (c cache) getShard(key string) *shard {
-	// calculate shard index for key
-	checksum := sha1.Sum([]byte(key))
-	hash := int(checksum[13])<<8 | int(checksum[17])
-	shardIndex := hash % len(c)
+	table := crc16.MakeTable(crc16.CRC16_MAXIM)
+	checksum := crc16.Checksum([]byte(key), table)
+	shardIndex := checksum % c.shardCount
 
-	return c[shardIndex]
+	return c.shards[shardIndex]
 }
 
 // add data to the cache
@@ -64,7 +68,7 @@ func (c cache) Add(key, data, expiration string) error {
 
 	shard.items[key] = &payload{
 		data,
-		int(time.Now().Add(exp).UnixNano()),
+		time.Now().Add(exp).UnixNano(),
 	}
 
 	return nil
@@ -121,7 +125,7 @@ func (c cache) Contains(key string) bool {
 
 // empty the cache of all data
 func (c cache) Flush() {
-	for _, shard := range c {
+	for _, shard := range c.shards {
 		shard.Lock()
 		shard.items = make(map[string]*payload)
 		shard.Unlock()
@@ -133,9 +137,9 @@ func (c cache) Keys() []string {
 	keys := make([]string, 0)
 	mutex := sync.Mutex{}
 	wg := sync.WaitGroup{}
-	wg.Add(len(c))
+	wg.Add(len(c.shards))
 
-	for _, shrd := range c {
+	for _, shrd := range c.shards {
 		go func(s *shard) {
 			s.RLock()
 
@@ -158,8 +162,8 @@ func (c cache) Keys() []string {
 }
 
 // sweep deletes any expired payload found inside a shard
-func (s *shard) sweep() {
-	ticker := time.NewTicker(s.sweepInterval)
+func (s *shard) sweep(interval time.Duration) {
+	ticker := time.NewTicker(interval)
 	defer ticker.Stop()
 
 	for range ticker.C {
@@ -174,6 +178,6 @@ func (s *shard) sweep() {
 }
 
 // check if a payload is expired
-func isExpired(expires int) bool {
-	return int(time.Now().UnixNano()) >= expires
+func isExpired(expires int64) bool {
+	return time.Now().UnixNano() >= expires
 }
