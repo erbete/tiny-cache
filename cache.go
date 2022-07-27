@@ -7,6 +7,8 @@ import (
 	"github.com/sigurn/crc16"
 )
 
+var makeTable = crc16.MakeTable(crc16.CRC16_MAXIM)
+
 type payload struct {
 	data    string
 	expires int64
@@ -48,8 +50,7 @@ func NewCache(shardCount uint16, sweepInterval string) cache {
 }
 
 func (c cache) getShard(key string) *shard {
-	table := crc16.MakeTable(crc16.CRC16_MAXIM)
-	checksum := crc16.Checksum([]byte(key), table)
+	checksum := crc16.Checksum([]byte(key), makeTable)
 	shardIndex := checksum % c.shardCount
 
 	return c.shards[shardIndex]
