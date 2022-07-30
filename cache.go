@@ -1,13 +1,12 @@
 package tinycache
 
 import (
+	"hash/crc32"
 	"sync"
 	"time"
-
-	"github.com/sigurn/crc16"
 )
 
-var makeTable = crc16.MakeTable(crc16.CRC16_MAXIM)
+var makeTable = crc32.MakeTable(crc32.IEEE)
 
 type payload struct {
 	data    string
@@ -50,8 +49,8 @@ func NewCache(shardCount uint16, sweepInterval string) cache {
 }
 
 func (c cache) getShard(key string) *shard {
-	checksum := crc16.Checksum([]byte(key), makeTable)
-	shardIndex := checksum % c.shardCount
+	checksum := crc32.Checksum([]byte(key), makeTable)
+	shardIndex := checksum % uint32(c.shardCount)
 
 	return c.shards[shardIndex]
 }
