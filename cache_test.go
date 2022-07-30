@@ -1,6 +1,7 @@
 package tinycache
 
 import (
+	"hash/crc32"
 	"strconv"
 	"testing"
 	"time"
@@ -182,6 +183,13 @@ func TestKeys(t *testing.T) {
 		if !cache.Contains(key) {
 			t.Error("not all keys found")
 		}
+	}
+}
+
+func TestCRC16(t *testing.T) {
+	checksum := crc32.Checksum([]byte("test"), makeTable)
+	if checksum != 3632233996 {
+		t.Errorf("got checksum %d, expected 2001", checksum)
 	}
 }
 
