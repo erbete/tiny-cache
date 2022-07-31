@@ -2,6 +2,7 @@ package tinycache
 
 import (
 	"hash/crc32"
+	"log"
 	"sync"
 	"time"
 )
@@ -27,7 +28,7 @@ type cache struct {
 func NewCache(shardCount uint16, sweepInterval string) cache {
 	interval, err := time.ParseDuration(sweepInterval)
 	if err != nil {
-		panic(err)
+		log.Fatalf("init cache: %v", err)
 	}
 
 	shards := make([]*shard, shardCount)
