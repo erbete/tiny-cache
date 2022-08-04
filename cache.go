@@ -1,7 +1,6 @@
 package tinycache
 
 import (
-	"fmt"
 	"hash/crc32"
 	"log"
 	"sync"
@@ -9,10 +8,6 @@ import (
 )
 
 var makeTable = crc32.MakeTable(crc32.IEEE)
-
-type ErrorKeyNotExist struct {
-	Key string
-}
 
 type payload struct {
 	data    string
@@ -186,8 +181,4 @@ func (s *shard) sweep(interval time.Duration) {
 // check if a payload is expired
 func isExpired(expires int64) bool {
 	return time.Now().UnixNano() >= expires
-}
-
-func (e *ErrorKeyNotExist) Error() string {
-	return fmt.Sprintf("key \"%s\" does not exist", e.Key)
 }
