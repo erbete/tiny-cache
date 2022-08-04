@@ -113,10 +113,6 @@ func (c cache) Contains(key string) bool {
 		return false
 	}
 
-	if payload.data == "" {
-		return false
-	}
-
 	if isExpired(payload.expires) {
 		return false
 	}
