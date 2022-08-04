@@ -58,14 +58,14 @@ func (c cache) getShard(key string) *shard {
 
 // add data to the cache
 func (c cache) Add(key, data, expiration string) error {
+	shard := c.getShard(key)
+	shard.Lock()
+	defer shard.Unlock()
+
 	exp, err := time.ParseDuration(expiration)
 	if err != nil {
 		return err
 	}
-
-	shard := c.getShard(key)
-	shard.Lock()
-	defer shard.Unlock()
 
 	shard.items[key] = &payload{
 		data,
