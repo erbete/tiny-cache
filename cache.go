@@ -20,8 +20,8 @@ type shard struct {
 }
 
 type cache struct {
-	shards        []*shard
 	shardCount    uint16
+	shards        []*shard
 	sweepInterval time.Duration
 }
 
